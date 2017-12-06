@@ -1,0 +1,63 @@
+{
+  "name": "electron-project-template",
+  "version": "1.0.0",
+  "description": "template for creating electron app",
+  "main": "init.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "yarn:start": "yarn start",
+    "yarn:build": "yarn build",
+    "preelectron": "npm run private:compile",
+    "preelectron:dev": "npm run private:compile",
+    "electron:dev": "concurrently \"cross-env BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
+    "react": "cross-env BROWSER=none yarn start",
+    "electron": "electron .",
+    "private:compile": "babel src/app --copy-files --out-dir build/app",
+    "postinstall": "electron-builder install-app-deps",
+    "private:clean": "rimraf build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buiduyhung13/electron-project-template.git"
+  },
+  "keywords": [
+    "electron",
+    "react"
+  ],
+  "author": {
+    "name": "Bui Duy Hung",
+    "email": "buiduyhung.13@gmail.com"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/buiduyhung13/electron-project-template/issues"
+  },
+  "homepage": "https://github.com/buiduyhung13/electron-project-template#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-react": "^6.24.1",
+    "babel-runtime": "^6.26.0",
+    "concurrently": "^3.5.1",
+    "cross-env": "^5.1.1",
+    "electron": "^1.7.9",
+    "electron-builder": "^19.48.2",
+    "eslint": "^4.12.1",
+    "eslint-plugin-react": "^7.5.1",
+    "npm-run-all": "^4.1.2",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-router-dom": "^4.2.2",
+    "react-scripts": "^1.0.17",
+    "rimraf": "^2.6.2",
+    "wait-on": "^2.0.2",
+    "yarn": "^1.3.2"
+  },
+  "dependencies": {
+    "electron-config": "^1.0.0",
+    "electron-updater": "^2.16.3",
+    "fs-jetpack": "^1.2.0",
+    "username": "^3.0.0"
+  }
+}
