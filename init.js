@@ -1,1 +1,1 @@
-require('./build/app/main');
+require('./build/main');

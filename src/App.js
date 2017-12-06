@@ -1,13 +1,20 @@
 import React from 'react';
 import * as Component from './components';
+const config = new (window.require('electron-config'))();
 
 class App extends React.Component {
 
     render() {
-        var componentName,
-            component = Component[componentName] ? Component[componentName] : Component.notFound;
-        return component;
+        // var componentName = config.get("currentApp.componentName");
+        // var AppComponent = router(componentName);
+        return (<p>
+                  { "HomePage" }
+                </p>);
     }
+}
+
+var router = (componentName) => {
+    return Component[componentName] ? Component[componentName] : Component.NotFound;
 }
 
 export default App;

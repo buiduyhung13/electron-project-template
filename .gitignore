@@ -58,7 +58,7 @@ typings/
 .env
 
 dist
-build/Release
+build/
 
 # MacOS file
 .DS_Store

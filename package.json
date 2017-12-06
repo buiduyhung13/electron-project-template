@@ -13,9 +13,13 @@
     "electron:dev": "concurrently \"cross-env BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
     "react": "cross-env BROWSER=none yarn start",
     "electron": "electron .",
-    "private:compile": "babel src/app --copy-files --out-dir build/app",
+    "publish": "run-s private:clean yarn:build private:compile private:publish:all",
+    "pack": "run-s private:clean yarn:build private:compile private:build:all",
+    "private:build:all": "build -mw",
+    "private:publish:all": "build -mw --publish always",
+    "private:compile": "babel src/app --copy-files --out-dir build",
     "postinstall": "electron-builder install-app-deps",
-    "private:clean": "rimraf build"
+    "private:clean": "rimraf build && rimraf dist"
   },
   "repository": {
     "type": "git",
@@ -33,7 +37,7 @@
   "bugs": {
     "url": "https://github.com/buiduyhung13/electron-project-template/issues"
   },
-  "homepage": "https://github.com/buiduyhung13/electron-project-template#readme",
+  "homepage": "./",
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-preset-es2015": "^6.24.1",
@@ -46,9 +50,6 @@
     "eslint": "^4.12.1",
     "eslint-plugin-react": "^7.5.1",
     "npm-run-all": "^4.1.2",
-    "react": "^16.2.0",
-    "react-dom": "^16.2.0",
-    "react-router-dom": "^4.2.2",
     "react-scripts": "^1.0.17",
     "rimraf": "^2.6.2",
     "wait-on": "^2.0.2",
@@ -58,6 +59,9 @@
     "electron-config": "^1.0.0",
     "electron-updater": "^2.16.3",
     "fs-jetpack": "^1.2.0",
-    "username": "^3.0.0"
+    "username": "^3.0.0",
+    "react": "^16.2.0",
+    "react-dom": "^16.2.0",
+    "react-router-dom": "^4.2.2"
   }
 }

@@ -7,6 +7,8 @@ const isDev = require('electron-is-dev');
 const config = new (require('electron-config'))();
 const appDir = jetpack.cwd(app.getAppPath());
 const currentUserName = require('username').sync();
+const path = require('path');
+
 let mainWindow = null;
 let forceQuit = null;
 
@@ -38,6 +40,7 @@ const createMainWindow = () => {
         show: true
     });
 
+    config.set("currentApp.componentName", "Main");
     mainWindow.loadURL(
         isDev ?
             'http://localhost:3000' :
@@ -82,10 +85,10 @@ const createMainWindow = () => {
             });
         }
     });
-}
+};
 
 const setApplicationMenu = () => {
-    const menus = [menuTemplate.appMenuTemplate, menuTemplate.editMenuTemplate];
+    const menus = [menuTemplate.appMenuTemplate, menuTemplate.editMenuTemplate, menuTemplate.devMenuTemplate];
     if (isDev) {
         menus.push(menuTemplate.devMenuTemplate);
     }
