@@ -60,6 +60,9 @@ autoUpdater.on('download-progress', (progressObj) => {
 autoUpdater.on('update-downloaded', (info) => {
     sendEventToBrowser(mainWindow, "update-info", `Update completed!!!`);
     autoUpdater.quitAndInstall(false, true);
+    setTimeout(() => {
+        openURL("Main");
+    }, 5000)
 });
 
 ipcMain.on('check-updates', () => {
