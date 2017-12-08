@@ -5,11 +5,9 @@ const config = new (window.require('electron-config'))();
 class App extends React.Component {
 
     render() {
-        // var componentName = config.get("currentApp.componentName");
-        // var AppComponent = router(componentName);
-        return (<p>
-                  { "HomePage" }
-                </p>);
+        var componentName = config.get("currentApp.componentName");
+        var AppComponent = router(componentName);
+        return (<AppComponent/>);
     }
 }
 

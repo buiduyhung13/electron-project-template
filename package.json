@@ -1,6 +1,6 @@
 {
   "name": "electron-project-template",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "template for creating electron app",
   "main": "init.js",
   "scripts": {

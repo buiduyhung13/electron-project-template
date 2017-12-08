@@ -15,6 +15,7 @@ let forceQuit = null;
 app.on('ready', () => {
     createMainWindow();
     setApplicationMenu();
+    appInfo();
 });
 
 app.on('activate', () => {
@@ -27,8 +28,65 @@ app.on('window-all-closed', () => {
     app.quit();
 });
 
+autoUpdater.on('checking-for-update', () => {
+    openURL("Update");
+// sendEventToBrowser(mainWindow, "update-info", 'Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+    sendEventToBrowser(mainWindow, "update-info", 'Update available.');
+});
+
+autoUpdater.on('update-not-available', (info) => {
+    sendEventToBrowser(mainWindow, "update-info", 'Update not available.');
+});
+
+autoUpdater.on('error', (err) => {
+    sendEventToBrowser(mainWindow, "update-info", `Error in auto-updater: ${err}. Will comeback to hompage in 10s`);
+
+    setTimeout(() => {
+        openURL("Main");
+    }, 10000)
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = "Download speed: " + progressObj.bytesPerSecond;
+    log_message = log_message + ' - Downloaded ' + Math.round(progressObj.percent) + '%';
+    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+
+    sendEventToBrowser(mainWindow, "update-info", log_message);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+    sendEventToBrowser(mainWindow, "update-info", `Update completed!!!`);
+    autoUpdater.quitAndInstall(false, true);
+});
+
+ipcMain.on('check-updates', () => {
+    initAutoUpdate();
+});
+
+const initAutoUpdate = () => {
+    try {
+        autoUpdater.checkForUpdates();
+    } catch (error) {}
+}
 const sendEventToBrowser = (browserWindow, eventName, eventData) => {
     browserWindow.webContents.send(eventName, eventData);
+}
+
+const openURL = (componentName) => {
+    try {
+        config.set("currentApp.componentName", componentName);
+        mainWindow.loadURL(
+            isDev ?
+                'http://localhost:3000' :
+                url.format({
+                    pathname: path.join(__dirname, 'index.html'),
+                    protocol: 'file:',
+                    slashes: true,
+                }));
+    } catch (error) {}
 }
 
 const createMainWindow = () => {
@@ -40,15 +98,7 @@ const createMainWindow = () => {
         show: true
     });
 
-    config.set("currentApp.componentName", "Main");
-    mainWindow.loadURL(
-        isDev ?
-            'http://localhost:3000' :
-            url.format({
-                pathname: path.join(__dirname, 'index.html'),
-                protocol: 'file:',
-                slashes: true,
-            }));
+    openURL('main');
 
     app.on('activate', () => {
         mainWindow.show();
@@ -88,7 +138,7 @@ const createMainWindow = () => {
 };
 
 const setApplicationMenu = () => {
-    const menus = [menuTemplate.appMenuTemplate, menuTemplate.editMenuTemplate, menuTemplate.devMenuTemplate];
+    const menus = [menuTemplate.appMenuTemplate, menuTemplate.editMenuTemplate];
     if (isDev) {
         menus.push(menuTemplate.devMenuTemplate);
     }
