@@ -1,6 +1,6 @@
-appId: com.electron.project.template.id
+appId: com.electron.scraping.property
 copyright: Duy Hung Bui
-productName: Electron Project Template
+productName: Electron Scraping Property
 
 asar: true
 

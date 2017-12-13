@@ -4,6 +4,11 @@ const config = new (window.require('electron-config'))();
 
 class App extends React.Component {
 
+    constructor() {
+        super();
+
+    }
+
     render() {
         var componentName = config.get("currentApp.componentName");
         var AppComponent = router(componentName);
