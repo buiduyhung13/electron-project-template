@@ -1,6 +1,7 @@
 import React from 'react';
 import { Segment, Button, Container, Header, Table, Label } from 'semantic-ui-react'
 import './../../stylesheets/App.css';
+import { setTimeout } from 'timers';
 const config = new (window.require('electron-config'))();
 const electron = window.require('electron'),
   remote = electron.remote,
@@ -13,8 +14,9 @@ const moment = require('moment');
 const fs = window.require('fs');
 const path = require('path');
 const _ = require('lodash');
-var csv = require("fast-csv");
-
+var csv = window.require("fast-csv");
+const log4js = window.require('log4js');
+const logger = configLog();
 let childWindow;
 let mainWindow;
 
@@ -22,16 +24,18 @@ const NO_DATA = "[no data]";
 const propertyGuru = require('./../../app/constants/propertyGuru'),
   BASE_URL = propertyGuru.PROPERTY_GURU
 
+var LIST_IP = ["128.106.194.251", "128.106.194.252", "128.106.194.253"]
+
 class GetAllCondoProperty extends React.Component {
   constructor() {
     super();
     this.state = {
       loading: false,
       scrapStartAt: "",
-      totalProperty: [],
-      propertySucceed: [],
-      propertyFailed: [],
-      totalProject: [],
+      propertySucceed: 0,
+      totalProject: 0,
+      projectScrappedSucceed: 0,
+      projectScrappedFailed: 0,
       scrapEndAt: "",
       totalRequest: 0,
       currentScrapPage: 0,
@@ -67,74 +71,163 @@ class GetAllCondoProperty extends React.Component {
     });
 
     if (filePath) {
-      var data = await readUserInput(filePath)
+      var data = await readUserInput(filePath[0]);
+      if (data.length > 0) {
+        this.state.totalProject = data.length;
+
+        var outputFile = generateOutput(app);
+        var succeedWriter = csvWriter({
+          sendHeaders: true
+        });
+        var failedWriter = csvWriter({
+          sendHeaders: true
+        });
+        succeedWriter.pipe(fs.createWriteStream(outputFile.succeedFile));
+        failedWriter.pipe(fs.createWriteStream(outputFile.failedFile));
+
+        var startAt = moment();
+        this.setState({
+          scrapStartAt: startAt.format("hh:mm:ss.SSS"),
+          loading: true,
+        });
+
+        var sleep = (miliseconds) => {
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              resolve();
+            }, miliseconds)
+          })
+        }
+
+        var scrapData = (projectName, projectURL) => {
+          return new Promise((resolve, reject) => {
+
+            var itemPerPage = 1000;
+            var stop = false;
+
+            var fn = async() => {
+              var lastPage = false;
+              var totalPropertyItems = [];
+              var page = 1;
+              var reloadPage = false;
+              do {
+                logger.info(`start loop to get property on page ${page}`);
+                var startAt = moment().unix();
+                var searchResults = {}
+
+                if (this.state.projectScrappedFailed < 5) {
+                  logger.info(`Make request and parse property data`);
+                  var cookies = await getCookies();
+                  var searchResultPage = await this.makeCondoPropertyRequest(page, itemPerPage, projectURL, cookies);
+                  if (searchResultPage) {
+                    searchResults = await this.writeCondoPropertyData(page, searchResultPage, projectName, projectURL, succeedWriter, failedWriter)
+                  } else {
+                    searchResults = {
+                      isBlocked: true
+                    }
+                  }
+                } else {
+                  logger.info(`Just skip because project failed too much ${this.state.projectScrappedFailed}`);
+                  this.state.currentState = `Exceed maximum failed. Just write the failed file to re-run`;
+                  searchResults.isBlocked = true;
+                }
+
+                lastPage = searchResults.lastPage;
+                page++;
+
+                if (!searchResults.isBlocked) {
+                  logger.info(`Data is OK, write to file`);
+                  totalPropertyItems = totalPropertyItems.concat(searchResults.results);
+
+                  if (lastPage === true) {
+                    var projectScrappedSucceed = this.state.projectScrappedSucceed + 1;
+                    var propertySucceed = this.state.propertySucceed + totalPropertyItems.length;
+
+                    logger.info(`Project: ${projectScrappedSucceed}`);
+                    logger.info(`PropertySucceed: ${propertySucceed}`);
+
+                    await this.setState({
+                      projectScrappedSucceed: projectScrappedSucceed,
+                      propertySucceed: propertySucceed
+                    });
+
+                  }
+                } else {
+                  var selection = 1;
+                  logger.info(`Current failed number: ${this.state.projectScrappedFailed}`);
+
+                  if (this.state.projectScrappedFailed <= 0) {
+                    selection = await dialog.showMessageBox(childWindow, {
+                      type: "question",
+                      buttons: ["YES", "NO"],
+                      title: 'Problem with scraping. Continue?',
+                      message: "Cannot get data, might have problem with capcha, please try capcha and run again!!!"
+                    });
+
+                    logger.info(`Confirm to retry? User selects: ${selection}`);
+                  }
+
+                  if (selection === 1) {
+                    logger.info(`User don't retry, just complete and write the failed file`);
+                    failedWriter.write({
+                      condoName: projectName,
+                      condoLink: projectURL
+                    });
+
+                    var projectScrappedFailed = this.state.projectScrappedFailed + 1;
+                    logger.info(`projectScrappedFailed: ${projectScrappedFailed}`);
+                    this.setState({
+                      projectScrappedFailed: projectScrappedFailed
+                    })
+                  } else {
+                    lastPage = false;
+                    page--;
+                    logger.info(`User retry. Return to page ${page}`);
+                  }
+                }
+                logger.info(`Complete one loop get data`);
+              } while (lastPage === false)
+              return totalPropertyItems;
+            }
+
+            fn()
+              .then((result) => {
+                logger.info(`Complete one project`);
+                resolve(result);
+              });
+          });
+        }
+
+        for (let i = 1; i < data.length; i++) {
+          var projectName = data[i].projectName
+          var projectURL = data[i].projectLink;
+          var propertyItems = await scrapData(projectName, projectURL);
+          await sleep(500);
+        }
+
+        var completeAt = moment() - startAt;
+        this.setState({
+          currentState: `Scrap completed after ${completeAt/1000}s`,
+          scrapEndAt: moment().format("hh:mm:ss.SSS"),
+          loading: false
+        });
+
+      }
+    } else {
+      this.setState({
+        currentState: `Cannot read data, please check again!!!`,
+        loading: false
+      })
     }
-
-    // var outputFile = generateOutput(app);
-    // var writer = csvWriter({
-    //   sendHeaders: true
-    // });
-    // writer.pipe(fs.createWriteStream(outputFile));
-    // var startAt = moment();
-    // this.setState({
-    //   scrapStartAt: startAt.format("hh:mm:ss.SSS"),
-    //   loading: true,
-    // });
-
-    // const scrapLinkDuration = 30000;
-    // const projectURL = "26-newton-21156";
-
-    // var scrapData = () => {
-    //   return new Promise((resolve, reject) => {
-    //     var totalPropertyItems = [];
-    //     var page = 1;
-    //     var itemPerPage = 500;
-
-    //     var fn = async() => {
-    //       page++;
-    //       var cookies = await getCookies();
-    //       var searchResultPage = await this.makeCondoPropertyRequest(page, itemPerPage, projectURL, cookies);
-    //       this.state.totalRequest = this.state.totalRequest + 1;
-
-    //       var searchResults = await this.writeCondoPropertyData(page, searchResultPage, writer);
-
-    //       totalPropertyItems = totalPropertyItems.concat(searchResults.results);
-    //       var lastPage = searchResults.lastPage;
-    //       if (lastPage) {
-    //         clearInterval(runInterval);
-    //         resolve(totalPropertyItems);
-    //       }
-
-    //     }
-
-    //     fn();
-
-    //     var runInterval = setInterval(fn, scrapLinkDuration);
-
-    //   });
-    // }
-
-    // var totalPropertyItems = await scrapData();
-    // this.setState({
-    //   totalProperty: totalPropertyItems
-    // });
-
-    // writer.end();
-
-  // var completeAt = moment() - startAt;
-  // this.setState({
-  //   currentState: `Scrap completed after ${completeAt/1000}s`,
-  //   scrapEndAt: moment().format("hh:mm:ss.SSS"),
-  //   loading: false
-  // });
   }
 
-  parsePropertyInfo = (searchPageResult, writer) => {
+  parsePropertyInfo = (searchPageResult, projectName, projectURL, writer) => {
     return new Promise((resolve, reject) => {
       const $ = cheerio.load(searchPageResult);
       var rightInfos = $("#contactmultiform .listing_info .info2");
       var leftInfos = $("#contactmultiform .listing_info .info1");
       var totalItems = rightInfos.length;
+      var results = []
       var itemArrays = []
       for (let i = 0; i < totalItems; i++) {
         itemArrays.push(i);
@@ -149,7 +242,9 @@ class GetAllCondoProperty extends React.Component {
           var askingPrice = $(`#contactmultiform #cartdiv_${listingInfo.listingID}`)
 
           var VALUE = {
-            projectName: (listingInfo["projectName"] !== undefined ? listingInfo["projectName"] : NO_DATA),
+            projectURL: projectURL,
+            projectName: projectName,
+            guruProjectName: (listingInfo["projectName"] !== undefined ? listingInfo["projectName"] : NO_DATA),
             listedDate: getListedData(leftInfoData) !== NO_DATA ? getListedData(leftInfoData)["listedDate"] : NO_DATA,
             floorArea: getFloorArea(rightInfoData),
             askingPrice: getAskingPrice(askingPrice),
@@ -166,35 +261,25 @@ class GetAllCondoProperty extends React.Component {
             relisted: getListedData(leftInfoData) !== NO_DATA ? getListedData(leftInfoData)["relisted"] : NO_DATA
           }
           await writer.write(VALUE);
-
-          this.setState({
-            currentState: `Scrapping ${listingInfo.projectName} (${listingInfo.listingID}) succeeds`
-          });
-
-          this.state.propertySucceed.push(VALUE);
-
+          results.push(VALUE);
 
         } catch (error) {
           console.log(`FAILED AT ${i} with error ${error}`);
           this.setState({
             currentState: `Scrapping ${listingInfo.projectName} (${listingInfo.listingID}) failed`
           });
-
-          this.state.propertyFailed.push(VALUE);
         }
       });
-
-      resolve();
+      resolve(results);
     })
   }
 
-
   makeCondoPropertyRequest = async(page = 1, items_per_page = 10, projectURL, cookies) => {
     var condoResultPage;
-    var requestURL = `https://www.propertyguru.com.sg/project-listings/${projectURL}?items_per_page=${items_per_page}`;
-    if (page > 1) {
-      requestURL = requestURL + "/" + page;
-    }
+    projectURL = projectURL.replace("/project/", "");
+    logger.info(`GET property list with ProjectURL=${projectURL}`);
+    var requestURL = `https://www.propertyguru.com.sg/project-listings/${projectURL}/${page}?items_per_page=${items_per_page}`;
+
     try {
       var options = {
         method: 'GET',
@@ -213,13 +298,18 @@ class GetAllCondoProperty extends React.Component {
       var resp = await callRequest(options);
       if (resp.statusCode === 200) {
         condoResultPage = resp.body;
+      } else {
+        logger.info(`Has problem: ${resp.statusCode}`);
+        logger.info(`Current page:@[ ${condoResultPage}]`);
       }
-    } catch (error) {}
-
+    } catch (error) {
+      logger.error(`Error when makeCondoPropertyRequest: ${error}`);
+    }
+    logger.info(`Return condoResultPage`);
     return condoResultPage;
   }
 
-  writeCondoPropertyData = async(page, condoResultPage, writer) => {
+  writeCondoPropertyData = async(page, condoResultPage, projectName, projectURL, succeedWriter) => {
     var condoPropertySearchResult = {
       results: [],
       lastPage: false,
@@ -230,18 +320,37 @@ class GetAllCondoProperty extends React.Component {
       if (condoResultPage !== undefined) {
         var condoItemSelector = "#contactmultiform .infotitle .bluelink";
         var condoBlocker = "#distilIdentificationBlock";
-        var lastPage = ".pagination a:contains('Last')";
         const $ = cheerio.load(condoResultPage);
         var isBlocked = $(condoBlocker).get().length
+        var lastPage = $(".resultFound .orangetext").get();
+
+        logger.info(`Is Blocked status ${isBlocked}`);
         if (isBlocked <= 0) {
-          await this.parsePropertyInfo(condoResultPage, writer);
-          var isLastPage = $(lastPage).get().length
-          condoPropertySearchResult.lastPage = isLastPage > 0 ? false : true;
+          var parsedResults = await this.parsePropertyInfo(condoResultPage, projectName, projectURL, succeedWriter);
+          logger.info(`Parsed complete: ${parsedResults.length} records`);
+          logger.info(`Is last page status ${lastPage}`);
+
+          var isLastPage = lastPage === undefined || lastPage.length === 0 || (lastPage[0].children[0].data === lastPage[1].children[0].data)
+
+          if (!isLastPage) {
+            try {
+              console.log(lastPage[0].children[0].data);
+              console.log(lastPage[1].children[0].data);
+            } catch (error) {}
+
+          }
+          condoPropertySearchResult.results = parsedResults;
+          condoPropertySearchResult.lastPage = isLastPage;
         } else {
           condoPropertySearchResult.isBlocked = true;
+          condoPropertySearchResult.lastPage = true
         }
+      } else {
+        logger.info(`condoResultPage is not defined`);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.log(`ERROR: ${error}`);
+    }
     return condoPropertySearchResult;
   }
 
@@ -281,39 +390,39 @@ class GetAllCondoProperty extends React.Component {
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>
-                        <Label color='green' basic size="large">Scrap project</Label>
+                        <Label color='black' basic size="large">Total project</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.totalProject.length }
+                        { this.state.totalProject }
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>
-                        <Label color='green' basic size="large">Total Property</Label>
+                        <Label color='brown' basic size="medium">Project succeed</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.propertySucceed.length }
+                        { this.state.projectScrappedSucceed }
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>
-                        <Label color='green' basic size="large">Scrap succeed pages</Label>
+                        <Label color='brown' basic size="medium">Project failed</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.propertySucceed.length }
+                        { this.state.projectScrappedFailed }
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>
-                        <Label color='red' basic size="large">Scrap failed pages</Label>
+                        <Label color='green' basic size="medium">Property Succeed</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.propertyFailed.length }
+                        { this.state.propertySucceed }
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>
-                        <Label color='green' ribbon size="large">Complete At</Label>
+                        <Label color='green' ribbon size="medium">Complete At</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
                         { this.state.scrapEndAt }
@@ -340,33 +449,91 @@ class GetAllCondoProperty extends React.Component {
   }
 }
 
+function configLog() {
+  var userData = app.getPath('userData');
+
+  log4js.configure({
+    appenders: {
+      out: {
+        type: 'stdout',
+        layout: {
+          type: 'pattern',
+          pattern: '%d %p [%X{where}] %m'
+        }
+      },
+      app: {
+        type: 'file',
+        filename: path.join(userData, "vn-scraping.log"),
+        layout: {
+          type: 'pattern',
+          pattern: '%d %p [%X{where}] %m'
+        }
+      }
+    },
+    categories: {
+      default: {
+        appenders: ['out', 'app'],
+        level: 'info'
+      }
+    }
+  });
+  return log4js.getLogger();
+}
+
+
 const generateOutput = (app) => {
   var directory = app.getPath('downloads');
   var outputDir = path.join(directory, `scrap-condo_${moment().format("YYYY-MM-DD")}`);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir);
   }
-  var outputFile = path.join(outputDir, "all-condominiums-property.csv");
-  return outputFile;
+  var succeedFile = path.join(outputDir, `all-condominiums-property_${moment().unix()}.csv`);
+  var failedFile = path.join(outputDir, `all-remains_project_${moment().unix()}.csv`);
+  return {
+    succeedFile: succeedFile,
+    failedFile: failedFile
+  };
 }
 
-const getCookies = () => {
+const getCookies = (reloadPage) => {
   return new Promise((resolve, reject) => {
-    mainWindow.reload();
-    mainWindow.webContents.session.cookies.get({
-      url: 'https://www.propertyguru.com.sg'
-    }, (error, cookies) => {
-      var cookiesValues = [];
-      try {
-        for (let i = 0; i < cookies.length; i++) {
-          cookiesValues.push(`${cookies[i].name}=${cookies[i].value}`);
-        }
+    var waitTimes = 5;
 
-      } catch (error) {
-        reject(error);
+    if (reloadPage === true || reloadPage === undefined) {
+      mainWindow.reload();
+      logger.info('Reload page to get cookies');
+    }
+
+    var isCookiesReady = setInterval(() => {
+      var isLoaded = mainWindow.webContents.isLoading();
+      logger.info(`WebContents loading status ${isLoaded}`);
+
+      if (isLoaded === false || waitTimes < 0) {
+        clearInterval(isCookiesReady);
+        mainWindow.webContents.session.cookies.get({
+          url: 'https://www.propertyguru.com.sg'
+        }, (error, cookies) => {
+          var cookiesValues = [];
+          try {
+            for (let i = 0; i < cookies.length; i++) {
+              cookiesValues.push(`${cookies[i].name}=${cookies[i].value}`);
+            }
+
+          } catch (error) {
+            reject(error);
+          }
+
+          var _cookiesValues = cookiesValues.join(";");
+          logger.info(`Get cookies=[${_cookiesValues}]`);
+          var fakeIP = _.sample(LIST_IP);
+          logger.info(`Random fake IP=[${fakeIP}]`);
+          _cookiesValues = _cookiesValues.replace("128.106.194.250", fakeIP);
+          logger.info(`Return cookies after fake IP=[${_cookiesValues}]`);
+          resolve(_cookiesValues);
+        });
+        waitTimes++;
       }
-      resolve(cookiesValues.join(";"));
-    });
+    }, 1000)
   });
 }
 
@@ -463,8 +630,10 @@ function getType(info) {
     data = data.replace(/\s\s+/g, ' ').trim();
     return data;
   } catch (err) {
-    return NO_DATA
+    console.log(err);
   }
+
+  return NO_DATA
 
 }
 
@@ -474,9 +643,11 @@ function getFurnishing(info) {
     data = data[0].children.filter(s => s.name === "b");
     data = data[0].children[0].data;
     return data
-  } catch (error) {
-    return NO_DATA
+  } catch (err) {
+    console.log(err);
   }
+
+  return NO_DATA
 }
 
 function getBedRooms(info) {
@@ -492,9 +663,11 @@ function getBedRooms(info) {
     } else {
       return NO_DATA
     }
-  } catch (error) {
-    return NO_DATA
+  } catch (err) {
+    console.log(err);
   }
+
+  return NO_DATA
 }
 
 
@@ -511,9 +684,11 @@ function getBathRooms(info) {
       data = NO_DATA
     }
     return data
-  } catch (error) {
-    return NO_DATA
+  } catch (err) {
+    console.log(err);
   }
+
+  return NO_DATA
 
 }
 
@@ -521,9 +696,11 @@ function getFloorArea(info) {
   try {
     var data = filterAttribute(info, "top3");
     return data[1].children[0].data;
-  } catch (error) {
-    return NO_DATA
+  } catch (err) {
+    console.log(err);
   }
+
+  return NO_DATA
 
 }
 
@@ -542,21 +719,28 @@ function getAskingPricePsm(info) {
   try {
     var data = filterAttribute(info, "top3");
     return data[0].children[0].data;
-  } catch (error) {
-    return NO_DATA
+  } catch (err) {
+    console.log(err);
   }
+
+  return NO_DATA
 
 }
 
 function readUserInput(filePath) {
   return new Promise((resolve, reject) => {
+    var userData = []
+
     csv
-      .fromPath(this.state.inputFilePath)
+      .fromPath(filePath)
       .on("data", function(data) {
-        console.log(data);
+        userData.push({
+          projectName: data[0],
+          projectLink: data[1]
+        });
       })
       .on("end", function() {
-        resolve()
+        resolve(userData);
       }).on('error', function() {
       reject()
     })

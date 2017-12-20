@@ -11,6 +11,8 @@ const csvWriter = require('csv-write-stream');
 const moment = require('moment');
 const fs = window.require('fs');
 const path = require('path');
+const log4js = window.require('log4js');
+const logger = configLog();
 
 let childWindow;
 let mainWindow;
@@ -205,6 +207,37 @@ class GetAllCondominiums extends React.Component {
         </div>
       </div>);
   }
+}
+
+function configLog() {
+  var userData = app.getPath('userData');
+
+  log4js.configure({
+    appenders: {
+      out: {
+        type: 'stdout',
+        layout: {
+          type: 'pattern',
+          pattern: '%d %p [%X{where}] %m'
+        }
+      },
+      app: {
+        type: 'file',
+        filename: path.join(userData, "vn-scraping.log"),
+        layout: {
+          type: 'pattern',
+          pattern: '%d %p [%X{where}] %m'
+        }
+      }
+    },
+    categories: {
+      default: {
+        appenders: ['out', 'app'],
+        level: 'info'
+      }
+    }
+  });
+  return log4js.getLogger();
 }
 
 const generateOutput = (app) => {

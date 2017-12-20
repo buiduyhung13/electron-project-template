@@ -1,0 +1,94 @@
+(
+      <div className="App">
+        <div>
+          <Segment.Group>
+            <Segment inverted color="black" textAlign="center" style={ { minHeight: 30, padding: '1em 1em' } }>
+              <Header>
+                { "Get all data from Condominiums" }
+              </Header>
+            </Segment>
+            <Segment loading={ this.state.loading } color="yellow" textAlign="center" style={ { minHeight: 460, maxHeight: 460, padding: '1em 1em' } }>
+              <Container>
+                <Table celled>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.HeaderCell textAlign="center" width={ "5" }>
+                      </Table.HeaderCell>
+                      <Table.HeaderCell textAlign="center"></Table.HeaderCell>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='blue' ribbon size="large">Start At</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.scrapStartAt }
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='black' basic size="large">Total project</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.totalProject.length }
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='brown' basic size="large">Scrapped Project succeed</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.projectScrappedSucceed }
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='brown' basic size="large">Scrapped Project failed</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.projectScrappedFailed }
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='green' basic size="large">Scrap Property Succeed</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.propertySucceed.length }
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='red' basic size="large">Scrap Property Failed</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.propertyFailed.length }
+                      </Table.Cell>
+                    </Table.Row>
+                    <Table.Row>
+                      <Table.Cell>
+                        <Label color='green' ribbon size="large">Complete At</Label>
+                      </Table.Cell>
+                      <Table.Cell textAlign="center">
+                        { this.state.scrapEndAt }
+                      </Table.Cell>
+                    </Table.Row>
+                  </Table.Body>
+                  <Table.Footer>
+                    <Table.Row>
+                      <Table.HeaderCell colSpan='2' textAlign='center'>
+                        { this.state.currentState }
+                      </Table.HeaderCell>
+                    </Table.Row>
+                  </Table.Footer>
+                </Table>
+              </Container>
+            </Segment>
+            <Segment inverted color="black" textAlign="center" style={ { minHeight: 60, padding: '1em 1em' } }>
+              <Button inverted color="facebook" id="btn-scrap" onClick={ this.handleClick } disabled={ this.state.loading }>Scrap</Button>
+              <Button id="btn-close" onClick={ this.handleClick }>Close</Button>
+            </Segment>
+          </Segment.Group>
+        </div>
+      </div>)

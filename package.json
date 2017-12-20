@@ -1,6 +1,6 @@
 {
   "name": "scraping-data",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "template for creating electron app",
   "main": "init.js",
   "scripts": {
@@ -49,7 +49,6 @@
     "electron-builder": "^19.48.2",
     "eslint": "^4.12.1",
     "eslint-plugin-react": "^7.5.1",
-    "fast-csv": "^2.4.1",
     "npm-run-all": "^4.1.2",
     "react-scripts": "^1.0.17",
     "rimraf": "^2.6.2",
@@ -63,8 +62,10 @@
     "csv-write-stream": "^2.0.0",
     "electron-config": "^1.0.0",
     "electron-updater": "^2.16.3",
+    "fast-csv": "^2.4.1",
     "fs-jetpack": "^1.2.0",
     "lodash": "^4.17.4",
+    "log4js": "^2.4.1",
     "moment": "^2.19.4",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",

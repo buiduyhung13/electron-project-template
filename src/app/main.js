@@ -80,8 +80,7 @@ ipcMain.on('call-job', (jobName) => {
         center: true,
         resizable: false,
         show: true,
-        parent: mainWindow,
-        modal: true,
+        parent: mainWindow
     });
 
     config.set('main.childWindow', childWindow.id);
@@ -89,36 +88,6 @@ ipcMain.on('call-job', (jobName) => {
 
     openComponent(childWindow, jobName);
 
-
-    // var request = require("request");
-
-    // var options = {
-    //     method: 'GET',
-    //     url: 'https://www.propertyguru.com.sg/condo-directory/search/params',
-    //     qs: {
-    //         searchProperty: 'true',
-    //         tracker: '',
-    //         smm: '1',
-    //         items_per_page: '50'
-    //     },
-    //     headers: {
-    //         connection: 'keep-alive',
-    //         cookie: 'D_SID=128.106.194.250:wl7ei+YwUfycz9IvzY4wRHuXmZkmm6j6kd916RryM2k; PHPSESSID2=35ntm6tqio8bdq2du5ftl7lmt2; PGURU_VISITOR=669c96fe-7f22-4ee8-a137-39e5021487a4; Visitor=b3035edc-5b9a-4937-b9b7-638b58ca1cd1; SEARCH_PER_PAGE=50; _ga=GA1.3.1632085638.1513083519; _gid=GA1.3.1573028086.1513083519; _gat=1; _gat_regionalTracker=1; D_IID=CF91FF26-E576-3E1B-9C46-8057CAE877B2; D_UID=4AE27FE4-DCFB-377E-BE45-5EC7F0FD3F23; D_ZID=702202CF-3FF1-3DBC-BFE0-3DC2E3E920DC; D_ZUID=70861982-951C-3914-B51B-548A2FF942A3; D_HID=E62F251E-922D-3D56-8597-F0BFE56A0EBA; cX_S=jb3oyme2e1wvhzkg; cX_P=jahnjl33vwo756wl',
-    //         'cache-control': 'no-cache',
-    //         accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-    //         'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
-    //         'upgrade-insecure-requests': '1',
-    //         'accept-language': 'en-US,en;q=0.9,vi;q=0.8',
-    //     // 'accept-encoding': 'gzip, deflate, br'
-    //     }
-    // };
-
-    // request(options, function(error, response, body) {
-    //     if (error)
-    //         throw new Error(error);
-
-    //     console.log(body);
-    // });
 
 });
 
@@ -176,6 +145,7 @@ const createMainWindow = () => {
         forceQuit = true;
     });
 
+    mainWindow.webContents.session.clearStorageData();
     mainWindow.webContents.on('did-finish-load', () => {
 
         // Handle window logic properly on macOS:
