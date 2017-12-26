@@ -1,7 +1,14 @@
 import React from 'react';
-import { Segment, Button, Container, Header, Table, Label } from 'semantic-ui-react'
+import {
+  Segment,
+  Button,
+  Container,
+  Header,
+  Table,
+  Label
+} from 'semantic-ui-react'
 import './../../stylesheets/App.css';
-const config = new (window.require('electron-config'))();
+const config = new(window.require('electron-config'))();
 const electron = window.require('electron'),
   remote = electron.remote,
   app = remote.app;
@@ -13,6 +20,7 @@ const fs = window.require('fs');
 const path = require('path');
 const log4js = window.require('log4js');
 const logger = configLog();
+var utils = require('./../../app/utils')
 
 let childWindow;
 let mainWindow;
@@ -30,7 +38,9 @@ class GetAllCondominiums extends React.Component {
       currentState: "Click Scrap to start scraping"
     }
 
-    this.handleClick.bind(this);
+    this
+      .handleClick
+      .bind(this);
   }
 
   handleClick = async(e) => {
@@ -49,9 +59,7 @@ class GetAllCondominiums extends React.Component {
 
   doScrapJob = async(e) => {
     var outputFile = generateOutput(app);
-    var writer = csvWriter({
-      sendHeaders: true
-    });
+    var writer = csvWriter({sendHeaders: true});
     writer.pipe(fs.createWriteStream(outputFile));
     var startAt = moment();
     this.setState({
@@ -69,33 +77,22 @@ class GetAllCondominiums extends React.Component {
       var cookies = await getCookies();
       var searchResultPage = await makeCondoSearchRequest(page, cookies);
       var searchResults = await readCondoSearchResult(page, searchResultPage);
-      this.setState({
-        currentState: `[${page}] return ${searchResults.results.length}} records`
-      });
+      this.setState({currentState: `[${page}] return ${searchResults.results.length}} records`});
       if (searchResults.results.length > 0) {
         var isWriteSucceed = writeToCSV(searchResults.results, writer);
         if (isWriteSucceed) {
           var currentPageSucceed = this.state.pageSucceed;
           currentPageSucceed.push(page);
-          this.setState({
-            currentState: `[${page}] wrote to csv successfully!!!`,
-            pageSucceed: currentPageSucceed
-          });
+          this.setState({currentState: `[${page}] wrote to csv successfully!!!`, pageSucceed: currentPageSucceed});
         } else {
           var currentPageFailed = this.state.pageFailed;
           currentPageFailed.push(page);
-          this.setState({
-            currentState: `[${page}] wrote to csv unsuccessfully!!!`,
-            pageFailed: currentPageFailed
-          });
+          this.setState({currentState: `[${page}] wrote to csv unsuccessfully!!!`, pageFailed: currentPageFailed});
         }
       } else {
         var currentPageFailed = this.state.pageFailed;
         currentPageFailed.push(page);
-        this.setState({
-          currentState: `[${page}] scrap failed`,
-          pageFailed: currentPageFailed
-        });
+        this.setState({currentState: `[${page}] scrap failed`, pageFailed: currentPageFailed});
       }
 
       if (searchResults.lastPage) {
@@ -103,7 +100,7 @@ class GetAllCondominiums extends React.Component {
 
         var completeAt = moment() - startAt;
         this.setState({
-          currentState: `Scrap completed after ${completeAt/1000}s`,
+          currentState: `Scrap completed after ${completeAt / 1000}s`,
           scrapEndAt: moment().format("hh:mm:ss.SSS"),
           loading: false
         });
@@ -126,24 +123,42 @@ class GetAllCondominiums extends React.Component {
   render() {
     var childWindowId = config.get('main.childWindow'),
       mainWindowId = config.get('main.mainWindow');
-    childWindow = remote.BrowserWindow.fromId(parseInt(childWindowId, 10));
-    mainWindow = remote.BrowserWindow.fromId(parseInt(mainWindowId, 10));
+    childWindow = remote
+      .BrowserWindow
+      .fromId(parseInt(childWindowId, 10));
+    mainWindow = remote
+      .BrowserWindow
+      .fromId(parseInt(mainWindowId, 10));
     return (
       <div className="App">
         <div>
           <Segment.Group>
-            <Segment inverted color="black" textAlign="center" style={ { minHeight: 30, padding: '1em 1em' } }>
+            <Segment
+              inverted
+              color="black"
+              textAlign="center"
+              style={{
+              minHeight: 30,
+              padding: '1em 1em'
+            }}>
               <Header>
-                { "Get all data from Condominiums" }
+                {"Get all data from Condominiums"}
               </Header>
             </Segment>
-            <Segment loading={ this.state.loading } color="yellow" textAlign="center" style={ { minHeight: 460, maxHeight: 460, padding: '1em 1em' } }>
+            <Segment
+              loading={this.state.loading}
+              color="yellow"
+              textAlign="center"
+              style={{
+              minHeight: 460,
+              maxHeight: 460,
+              padding: '1em 1em'
+            }}>
               <Container>
                 <Table celled>
                   <Table.Header>
                     <Table.Row>
-                      <Table.HeaderCell textAlign="center" width={ "5" }>
-                      </Table.HeaderCell>
+                      <Table.HeaderCell textAlign="center" width={"5"}></Table.HeaderCell>
                       <Table.HeaderCell textAlign="center"></Table.HeaderCell>
                     </Table.Row>
                   </Table.Header>
@@ -153,7 +168,7 @@ class GetAllCondominiums extends React.Component {
                         <Label color='blue' ribbon size="large">Start At</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.scrapStartAt }
+                        {this.state.scrapStartAt}
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
@@ -161,7 +176,7 @@ class GetAllCondominiums extends React.Component {
                         <Label color='black' basic size="large">Current Scraping pages</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.currentScrapPage }
+                        {this.state.currentScrapPage}
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
@@ -169,7 +184,7 @@ class GetAllCondominiums extends React.Component {
                         <Label color='green' basic size="large">Scrap succeed pages</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.pageSucceed.length }
+                        {this.state.pageSucceed.length}
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
@@ -177,7 +192,7 @@ class GetAllCondominiums extends React.Component {
                         <Label color='red' basic size="large">Scrap failed pages</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.pageFailed.length }
+                        {this.state.pageFailed.length}
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
@@ -185,27 +200,40 @@ class GetAllCondominiums extends React.Component {
                         <Label color='green' ribbon size="large">Complete At</Label>
                       </Table.Cell>
                       <Table.Cell textAlign="center">
-                        { this.state.scrapEndAt }
+                        {this.state.scrapEndAt}
                       </Table.Cell>
                     </Table.Row>
                   </Table.Body>
                   <Table.Footer>
                     <Table.Row>
                       <Table.HeaderCell colSpan='2' textAlign='center'>
-                        { this.state.currentState }
+                        {this.state.currentState}
                       </Table.HeaderCell>
                     </Table.Row>
                   </Table.Footer>
                 </Table>
               </Container>
             </Segment>
-            <Segment inverted color="black" textAlign="center" style={ { minHeight: 60, padding: '1em 1em' } }>
-              <Button inverted color="facebook" id="btn-scrap" onClick={ this.handleClick } disabled={ this.state.loading }>Scrap</Button>
-              <Button id="btn-close" onClick={ this.handleClick }>Close</Button>
+            <Segment
+              inverted
+              color="black"
+              textAlign="center"
+              style={{
+              minHeight: 60,
+              padding: '1em 1em'
+            }}>
+              <Button
+                inverted
+                color="facebook"
+                id="btn-scrap"
+                onClick={this.handleClick}
+                disabled={this.state.loading}>Scrap</Button>
+              <Button id="btn-close" onClick={this.handleClick}>Close</Button>
             </Segment>
           </Segment.Group>
         </div>
-      </div>);
+      </div>
+    );
   }
 }
 
@@ -232,7 +260,9 @@ function configLog() {
     },
     categories: {
       default: {
-        appenders: ['out', 'app'],
+        appenders: [
+          'out', 'app'
+        ],
         level: 'info'
       }
     }
@@ -253,20 +283,24 @@ const generateOutput = (app) => {
 const getCookies = () => {
   return new Promise((resolve, reject) => {
     mainWindow.reload();
-    mainWindow.webContents.session.cookies.get({
-      url: 'https://www.propertyguru.com.sg'
-    }, (error, cookies) => {
-      var cookiesValues = [];
-      try {
-        for (let i = 0; i < cookies.length; i++) {
-          cookiesValues.push(`${cookies[i].name}=${cookies[i].value}`);
-        }
+    mainWindow
+      .webContents
+      .session
+      .cookies
+      .get({
+        url: 'https://www.propertyguru.com.sg'
+      }, (error, cookies) => {
+        var cookiesValues = [];
+        try {
+          for (let i = 0; i < cookies.length; i++) {
+            cookiesValues.push(`${cookies[i].name}=${cookies[i].value}`);
+          }
 
-      } catch (error) {
-        reject(error);
-      }
-      resolve(cookiesValues.join(";"));
-    });
+        } catch (error) {
+          reject(error);
+        }
+        resolve(cookiesValues.join(";"));
+      });
   });
 }
 
@@ -287,8 +321,10 @@ const makeCondoSearchRequest = async(page = 1, cookies) => {
         connection: 'keep-alive',
         cookie: cookies,
         'cache-control': 'no-cache',
-        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;' +
+            'q=0.8',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like ' +
+            'Gecko) Chrome/62.0.3202.94 Safari/537.36',
         'upgrade-insecure-requests': '1',
         'accept-language': 'en-US,en;q=0.9,vi;q=0.8'
       }
@@ -316,20 +352,24 @@ const readCondoSearchResult = async(page, condoSearchPage) => {
       var condoBlocker = "#distilIdentificationBlock";
       var lastPage = ".pagination a:contains('Last')";
       const $ = cheerio.load(condoSearchPage);
-      var isBlocked = $(condoBlocker).get().length
+      var isBlocked = $(condoBlocker)
+        .get()
+        .length
       if (isBlocked <= 0) {
         var items = $(condoItemSelector).get();
         items.forEach((item) => {
           var link = item.attribs["href"]
           var name = item.children[0].data;
-          condoSearchResult.results.push({
-            searchPage: page,
-            condoName: name,
-            condoLink: link
-          });
+          condoSearchResult
+            .results
+            .push({searchPage: page, condoName: name, condoLink: link});
         });
-        var isLastPage = $(lastPage).get().length
-        condoSearchResult.lastPage = isLastPage > 0 ? false : true;
+        var isLastPage = $(lastPage)
+          .get()
+          .length
+        condoSearchResult.lastPage = isLastPage > 0
+          ? false
+          : true;
       } else {
         condoSearchResult.isBlocked = true;
       }

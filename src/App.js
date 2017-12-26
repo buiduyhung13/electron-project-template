@@ -1,12 +1,11 @@
 import React from 'react';
 import * as Component from './components';
-const config = new (window.require('electron-config'))();
+const config = new(window.require('electron-config'))();
 
 class App extends React.Component {
 
     constructor() {
         super();
-
     }
 
     render() {
@@ -17,7 +16,9 @@ class App extends React.Component {
 }
 
 var router = (componentName) => {
-    return Component[componentName] ? Component[componentName] : Component.NotFound;
+    return Component[componentName]
+        ? Component[componentName]
+        : Component.NotFound;
 }
 
 export default App;
